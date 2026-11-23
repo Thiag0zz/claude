@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section class="hero">
+  <div class="container">
+    <h1>Contratos públicos do Brasil,<br><span>em uma API simples.</span></h1>
+    <p>Busque contratos de órgãos federais, estaduais e municipais publicados no PNCP. Filtre por órgão, fornecedor, UF, valor e data, e receba tudo em JSON.</p>
+    <div class="acoes">
+      <a class="botao" href="/chave">Gerar chave gratuita</a>
+      <a class="botao secundario" href="/documentacao">Ver documentação</a>
+    </div>
+
+    <div class="numeros">
+      <div class="numero">
+        <strong>{{ "{:,}".format(resumo.total_contratos).replace(",", ".") }}</strong>
+        <span>contratos na base</span>
+      </div>
+      <div class="numero">
+        <strong>R$ {{ "{:,.0f}".format(resumo.valor_total).replace(",", ".") }}</strong>
+        <span>em valor global</span>
+      </div>
+      <div class="numero">
+        <strong>{{ resumo.sincronizado_ate.strftime("%d/%m/%Y") if resumo.sincronizado_ate else "—" }}</strong>
+        <span>sincronizado até</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="secao">
+  <div class="container">
+    <h2>Como funciona</h2>
+    <p class="sub">Três passos para começar a consultar.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="icone">1</div>
+        <h3>Gere sua chave</h3>
+        <p>Informe nome e e-mail e receba uma chave de acesso na hora.</p>
+      </div>
+      <div class="card">
+        <div class="icone">2</div>
+        <h3>Faça a requisição</h3>
+        <p>Envie a chave no cabeçalho <code class="inline">X-API-Key</code> e use os filtros que precisar.</p>
+      </div>
+      <div class="card">
+        <div class="icone">3</div>
+        <h3>Use os dados</h3>
+        <p>Respostas em JSON paginado, com link direto para o contrato no PNCP.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="secao" style="padding-top:0">
+  <div class="container">
+    <h2>Exemplo</h2>
+    <p class="sub">Contratos de SP acima de R$ 1 milhão, do maior para o menor valor.</p>
+<pre class="codigo">curl "{{ request.base_url }}v1/contratos?uf=SP&amp;valor_min=1000000&amp;ordem=maior_valor" \
+  -H "X-API-Key: SUA_CHAVE"</pre>
+  </div>
+</section>
+{% endblock %}

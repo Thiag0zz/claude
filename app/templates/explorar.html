@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block titulo %}Explorar · {{ app_name }}{% endblock %}
+{% block conteudo %}
+<div class="container">
+  <div class="secao" style="padding-bottom:0">
+    <h2>Explorar contratos</h2>
+    <p class="sub">Teste a API direto pelo navegador, usando a sua chave.</p>
+  </div>
+
+  <form id="busca" class="filtros">
+    <div class="largo">
+      <label for="apiKey">Chave de API</label>
+      <input id="apiKey" placeholder="ck_..." autocomplete="off" required>
+    </div>
+    <div class="largo">
+      <label for="q">Busca</label>
+      <input id="q" name="q" placeholder="Objeto, órgão ou fornecedor">
+    </div>
+    <div>
+      <label for="uf">UF</label>
+      <select id="uf" name="uf">
+        <option value="">Todas</option>
+        {% for sigla in ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO"] %}
+        <option>{{ sigla }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="esfera">Esfera</label>
+      <select id="esfera" name="esfera">
+        <option value="">Todas</option>
+        <option value="F">Federal</option>
+        <option value="E">Estadual</option>
+        <option value="M">Municipal</option>
+      </select>
+    </div>
+    <div>
+      <label for="valor_min">Valor mínimo (R$)</label>
+      <input id="valor_min" name="valor_min" type="number" min="0" step="any">
+    </div>
+    <div>
+      <label for="ordem">Ordenar por</label>
+      <select id="ordem" name="ordem">
+        <option value="recentes">Mais recentes</option>
+        <option value="maior_valor">Maior valor</option>
+        <option value="menor_valor">Menor valor</option>
+        <option value="antigos">Mais antigos</option>
+      </select>
+    </div>
+    <div>
+      <button class="botao" type="submit" style="width:100%">Buscar</button>
+    </div>
+  </form>
+
+  <p class="resultado-info" id="info"></p>
+  <div class="lista" id="lista"></div>
+  <div class="paginacao" id="paginacao" hidden>
+    <button class="botao secundario" id="anterior" type="button">Anterior</button>
+    <span id="pag-atual"></span>
+    <button class="botao secundario" id="proxima" type="button">Próxima</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const $ = (id) => document.getElementById(id);
+  const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const dataBR = (iso) => iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—";
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  let pagina = 1;
+
+  try { $("apiKey").value = localStorage.getItem("apiKey") || ""; } catch (e) {}
+
+  async function buscar() {
+    const chave = $("apiKey").value.trim();
+    try { localStorage.setItem("apiKey", chave); } catch (e) {}
+    const params = new URLSearchParams({ pagina, por_pagina: 20 });
+    for (const campo of ["q", "uf", "esfera", "valor_min", "ordem"]) {
+      const v = $(campo).value.trim();
+      if (v) params.set(campo, v);
+    }
+    $("info").textContent = "Buscando…";
+    const resp = await fetch("/v1/contratos?" + params, { headers: { "X-API-Key": chave } });
+    const corpo = await resp.json();
+    if (!resp.ok) {
+      $("info").textContent = corpo.detail || "Erro na consulta.";
+      $("lista").innerHTML = "";
+      $("paginacao").hidden = true;
+      return;
+    }
+    $("info").textContent = `${corpo.total.toLocaleString("pt-BR")} contratos encontrados`;
+    $("lista").innerHTML = corpo.dados.length ? corpo.dados.map((c) => `
+      <article class="contrato">
+        <div class="linha1">
+          <p class="objeto">${esc(c.objeto) || "Sem objeto informado"}</p>
+          <span class="valor">${c.valor_global != null ? moeda.format(c.valor_global) : "—"}</span>
+        </div>
+        <div class="meta">
+          <span class="etiqueta">${esc(c.tipo_contrato || "Contrato")}</span>
+          <span>${esc(c.orgao_nome)}</span>
+          <span>${esc(c.municipio)}${c.uf ? " / " + esc(c.uf) : ""}</span>
+        </div>
+        <div class="meta">
+          <span>Fornecedor: ${esc(c.fornecedor_nome) || "—"}</span>
+          <span>Assinado em ${dataBR(c.data_assinatura)}</span>
+          ${c.url_pncp ? `<a href="${esc(c.url_pncp)}" target="_blank" rel="noopener">Ver no PNCP</a>` : ""}
+        </div>
+      </article>`).join("") : '<p class="vazio">Nenhum contrato encontrado com esses filtros.</p>';
+    $("paginacao").hidden = corpo.total_paginas <= 1;
+    $("pag-atual").textContent = `Página ${corpo.pagina} de ${corpo.total_paginas}`;
+    $("anterior").disabled = corpo.pagina <= 1;
+    $("proxima").disabled = corpo.pagina >= corpo.total_paginas;
+  }
+
+  $("busca").addEventListener("submit", (e) => { e.preventDefault(); pagina = 1; buscar(); });
+  $("anterior").addEventListener("click", () => { pagina--; buscar(); window.scrollTo(0, 0); });
+  $("proxima").addEventListener("click", () => { pagina++; buscar(); window.scrollTo(0, 0); });
+</script>
+{% endblock %}

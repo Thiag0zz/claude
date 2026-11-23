@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block titulo %}Documentação · {{ app_name }}{% endblock %}
+{% block conteudo %}
+<div class="container doc">
+  <nav>
+    <a href="#autenticacao">Autenticação</a>
+    <a href="#buscar">Buscar contratos</a>
+    <a href="#detalhar">Detalhar contrato</a>
+    <a href="#resposta">Formato da resposta</a>
+    <a href="#limites">Limites e erros</a>
+    <a href="/api/docs">Referência interativa →</a>
+  </nav>
+
+  <article>
+    <h1>Documentação</h1>
+    <p>A API devolve contratos publicados no Portal Nacional de Contratações Públicas (PNCP), normalizados e pesquisáveis. URL base: <code class="inline">{{ base_url }}</code></p>
+
+    <h2 id="autenticacao">Autenticação</h2>
+    <p>Toda requisição precisa da sua chave no cabeçalho <code class="inline">X-API-Key</code>. <a href="/chave">Gere uma chave</a> se ainda não tiver.</p>
+<pre class="codigo">curl "{{ base_url }}/v1/contratos" -H "X-API-Key: SUA_CHAVE"</pre>
+
+    <h2 id="buscar">Buscar contratos</h2>
+    <p><code class="inline">GET /v1/contratos</code> com qualquer combinação dos filtros abaixo.</p>
+    <table>
+      <tr><th>Parâmetro</th><th>Descrição</th></tr>
+      <tr><td><code>q</code></td><td>Texto no objeto, no nome do órgão ou do fornecedor</td></tr>
+      <tr><td><code>uf</code></td><td>Sigla da UF, ex: <code>MG</code></td></tr>
+      <tr><td><code>municipio</code></td><td>Nome do município</td></tr>
+      <tr><td><code>orgao_cnpj</code></td><td>CNPJ do órgão (com ou sem pontuação)</td></tr>
+      <tr><td><code>fornecedor_ni</code></td><td>CNPJ ou CPF do fornecedor</td></tr>
+      <tr><td><code>tipo_contrato</code></td><td>Ex: <code>Contrato</code>, <code>Empenho</code>, <code>Outros</code></td></tr>
+      <tr><td><code>esfera</code></td><td><code>F</code> federal, <code>E</code> estadual, <code>M</code> municipal</td></tr>
+      <tr><td><code>valor_min</code>, <code>valor_max</code></td><td>Faixa de valor global, em reais</td></tr>
+      <tr><td><code>assinatura_de</code>, <code>assinatura_ate</code></td><td>Faixa de data de assinatura (AAAA-MM-DD)</td></tr>
+      <tr><td><code>ordem</code></td><td><code>recentes</code> (padrão), <code>antigos</code>, <code>maior_valor</code>, <code>menor_valor</code></td></tr>
+      <tr><td><code>pagina</code>, <code>por_pagina</code></td><td>Paginação; <code>por_pagina</code> vai de 1 a 100 (padrão 20)</td></tr>
+    </table>
+<pre class="codigo">curl "{{ base_url }}/v1/contratos?q=merenda&amp;uf=MG&amp;assinatura_de=2026-01-01" \
+  -H "X-API-Key: SUA_CHAVE"</pre>
+
+    <h3>Python</h3>
+<pre class="codigo">import requests
+
+resp = requests.get(
+    "{{ base_url }}/v1/contratos",
+    params={"uf": "SP", "valor_min": 1_000_000, "ordem": "maior_valor"},
+    headers={"X-API-Key": "SUA_CHAVE"},
+)
+for contrato in resp.json()["dados"]:
+    print(contrato["valor_global"], contrato["objeto"])</pre>
+
+    <h3>JavaScript</h3>
+<pre class="codigo">const resp = await fetch("{{ base_url }}/v1/contratos?uf=RJ", {
+  headers: { "X-API-Key": "SUA_CHAVE" },
+});
+const { dados, total } = await resp.json();</pre>
+
+    <h2 id="detalhar">Detalhar contrato</h2>
+    <p><code class="inline">GET /v1/contratos/{numero_controle_pncp}</code> devolve todos os campos, incluindo o registro original do PNCP em <code>original_pncp</code>.</p>
+<pre class="codigo">curl "{{ base_url }}/v1/contratos/92913318000181-2-000074/2026" -H "X-API-Key: SUA_CHAVE"</pre>
+
+    <h2 id="resposta">Formato da resposta</h2>
+<pre class="codigo">{
+  "pagina": 1,
+  "por_pagina": 20,
+  "total": 1532,
+  "total_paginas": 77,
+  "dados": [
+    {
+      "numero_controle_pncp": "92913318000181-2-000074/2026",
+      "objeto": "Inscrições no 2º Congresso Estadual...",
+      "orgao_cnpj": "92913318000181",
+      "orgao_nome": "CONSELHO REGIONAL DE ADMINISTRACAO DO RIO GRANDE DO SUL",
+      "municipio": "Porto Alegre",
+      "uf": "RS",
+      "fornecedor_ni": "53464437000142",
+      "fornecedor_nome": "FORUM DOS CONSELHOS REGIONAIS...",
+      "valor_global": 3400.0,
+      "data_assinatura": "2026-10-27",
+      "vigencia_fim": "2026-11-27",
+      "url_pncp": "https://pncp.gov.br/app/contratos/92913318000181/2026/74",
+      ...
+    }
+  ]
+}</pre>
+
+    <h2 id="limites">Limites e erros</h2>
+    <p>Cada chave pode fazer até <strong>{{ limite_por_minuto }}</strong> requisições por minuto. Os cabeçalhos <code class="inline">X-RateLimit-Limit</code> e <code class="inline">X-RateLimit-Remaining</code> mostram o seu consumo.</p>
+    <table>
+      <tr><th>Código</th><th>Significado</th></tr>
+      <tr><td>401</td><td>Chave ausente, inválida ou desativada</td></tr>
+      <tr><td>404</td><td>Contrato não encontrado</td></tr>
+      <tr><td>422</td><td>Parâmetro inválido (a resposta diz qual)</td></tr>
+      <tr><td>429</td><td>Limite por minuto atingido; aguarde o tempo do cabeçalho <code>Retry-After</code></td></tr>
+    </table>
+  </article>
+</div>
+{% endblock %}

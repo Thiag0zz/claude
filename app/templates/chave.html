@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Obter chave · {{ app_name }}{% endblock %}
+{% block conteudo %}
+<div class="container">
+  <div class="painel">
+    {% if chave %}
+      <h1>Sua chave está pronta</h1>
+      <p>Copie e guarde em local seguro. Por segurança, ela <strong>não será exibida novamente</strong>.</p>
+      <div class="chave-box">
+        <input id="chave" value="{{ chave }}" readonly>
+        <button class="botao" type="button" onclick="copiar()">Copiar</button>
+      </div>
+      <div class="alerta info">Envie a chave no cabeçalho <code class="inline">X-API-Key</code> de cada requisição.</div>
+      <a class="botao" href="/explorar">Testar no Explorar</a>
+    {% else %}
+      <h1>Gerar chave de acesso</h1>
+      <p>Gratuito. A chave é criada na hora.</p>
+      {% if erro %}<div class="alerta erro">{{ erro }}</div>{% endif %}
+      <form method="post" action="/chave">
+        <label for="nome">Nome ou empresa</label>
+        <input id="nome" name="nome" required minlength="2" maxlength="120" value="{{ nome or '' }}">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" required maxlength="255">
+        <button class="botao" type="submit">Gerar chave</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const campoChave = document.getElementById("chave");
+  if (campoChave) {
+    // Deixa a chave preenchida na página Explorar deste navegador.
+    try { localStorage.setItem("apiKey", campoChave.value); } catch (e) {}
+  }
+  function copiar() {
+    campoChave.select();
+    navigator.clipboard.writeText(campoChave.value).then(() => {
+      document.querySelector(".chave-box .botao").textContent = "Copiada!";
+    });
+  }
+</script>
+{% endblock %}

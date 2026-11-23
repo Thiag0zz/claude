@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+  <header class="topo">
+    <div class="container">
+      <a class="marca" href="/"><span class="marca-icone">{{ app_name[:1] }}</span>{{ app_name }}</a>
+      <nav class="menu">
+        <a href="/explorar" class="{{ 'ativo' if pagina == 'explorar' }}">Explorar</a>
+        <a href="/documentacao" class="{{ 'ativo' if pagina == 'docs' }}">Documentação</a>
+        <a href="/api/docs">Referência</a>
+        <a href="/chave" class="botao">Obter chave</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>{% block conteudo %}{% endblock %}</main>
+
+  <footer class="rodape">
+    <div class="container">
+      <span>{{ app_name }} · Dados públicos do Portal Nacional de Contratações Públicas (PNCP)</span>
+      <span>Plataforma independente, sem vínculo com o governo federal.</span>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
